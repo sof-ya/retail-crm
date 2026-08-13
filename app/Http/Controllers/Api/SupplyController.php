@@ -5,13 +5,16 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSupplyRequest;
 use App\Http\Resources\SupplyResource;
-use App\Models\Stock;
 use App\Models\Supply;
+use App\Services\SupplyService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class SupplyController extends Controller
 {
+    public function __construct(
+        private SupplyService $supplyService,
+    ) {}
+
     public function index(Request $request)
     {
         $query = Supply::with(['warehouse', 'items.product']);
@@ -35,34 +38,7 @@ class SupplyController extends Controller
 
     public function store(StoreSupplyRequest $request)
     {
-        $supply = DB::transaction(function () use ($request) {
-            $supply = Supply::create([
-                'warehouse_id' => $request->warehouse_id,
-                'created_at' => now(),
-            ]);
-
-            foreach ($request->items as $item) {
-                $supply->items()->create([
-                    'product_id' => $item['product_id'],
-                    'count' => $item['count'],
-                ]);
-
-                $stock = Stock::where('product_id', $item['product_id'])
-                    ->where('warehouse_id', $request->warehouse_id);
-
-                if ($stock->exists()) {
-                    $stock->increment('stock', $item['count']);
-                } else {
-                    Stock::create([
-                        'product_id' => $item['product_id'],
-                        'warehouse_id' => $request->warehouse_id,
-                        'stock' => $item['count'],
-                    ]);
-                }
-            }
-
-            return $supply;
-        });
+        $supply = $this->supplyService->create($request->validated());
 
         return new SupplyResource($supply->load(['warehouse', 'items.product']));
     }
