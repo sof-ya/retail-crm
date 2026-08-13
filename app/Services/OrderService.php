@@ -37,12 +37,34 @@ class OrderService
             $order->update($data);
 
             if (isset($data['items'])) {
+                $oldItems = $order->items()->get();
+
+                foreach ($oldItems as $oldItem) {
+                    StockMovement::create([
+                        'product_id' => $oldItem->product_id,
+                        'warehouse_id' => $order->warehouse_id,
+                        'doc_type' => 'Order',
+                        'doc_id' => $order->id,
+                        'quantity' => $oldItem->count,
+                        'created_at' => now(),
+                    ]);
+                }
+
                 $order->items()->delete();
 
                 foreach ($data['items'] as $item) {
                     $order->items()->create([
                         'product_id' => $item['product_id'],
                         'count' => $item['count'],
+                    ]);
+
+                    StockMovement::create([
+                        'product_id' => $item['product_id'],
+                        'warehouse_id' => $order->warehouse_id,
+                        'doc_type' => 'Order',
+                        'doc_id' => $order->id,
+                        'quantity' => -$item['count'],
+                        'created_at' => now(),
                     ]);
                 }
             }

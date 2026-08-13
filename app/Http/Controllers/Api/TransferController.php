@@ -42,14 +42,7 @@ class TransferController extends Controller
 
     public function store(StoreTransferRequest $request)
     {
-        $transfer = $this->transferService->create($request->validated());
-
-        return new TransferResource($transfer->load(['fromWarehouse', 'toWarehouse', 'items.product']));
-    }
-
-    public function complete(Transfer $transfer)
-    {
-        $result = $this->transferService->complete($transfer);
+        $result = $this->transferService->create($request->validated());
 
         if ($result instanceof Transfer) {
             return new TransferResource($result->load(['fromWarehouse', 'toWarehouse', 'items.product']));
