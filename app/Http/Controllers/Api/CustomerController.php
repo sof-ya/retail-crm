@@ -27,9 +27,11 @@ class CustomerController extends Controller
             $query->where('email', 'like', '%' . $request->email . '%');
         }
 
-        $perPage = $request->input('per_page', 15);
+        if ($request->has('per_page')) {
+            return CustomerResource::collection($query->paginate($request->input('per_page', 15)));
+        }
 
-        return CustomerResource::collection($query->paginate($perPage));
+        return CustomerResource::collection($query->get());
     }
 
     public function store(StoreCustomerRequest $request)

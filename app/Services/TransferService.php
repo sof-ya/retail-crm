@@ -68,7 +68,7 @@ class TransferService
                 StockMovement::create([
                     'product_id' => $item['product_id'],
                     'warehouse_id' => $data['from_warehouse_id'],
-                    'doc_type' => 'Transfer',
+                    'doc_type' => Transfer::class,
                     'doc_id' => $transfer->id,
                     'quantity' => -$item['count'],
                     'created_at' => now(),
@@ -77,7 +77,7 @@ class TransferService
                 StockMovement::create([
                     'product_id' => $item['product_id'],
                     'warehouse_id' => $data['to_warehouse_id'],
-                    'doc_type' => 'Transfer',
+                    'doc_type' => Transfer::class,
                     'doc_id' => $transfer->id,
                     'quantity' => $item['count'],
                     'created_at' => now(),

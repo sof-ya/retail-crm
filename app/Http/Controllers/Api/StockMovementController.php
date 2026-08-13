@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\StockMovementResource;
 use App\Models\StockMovement;
+use App\Models\Product;
+use App\Models\Warehouse;
 use Illuminate\Http\Request;
 
 class StockMovementController extends Controller
@@ -36,5 +38,32 @@ class StockMovementController extends Controller
         $perPage = $request->input('per_page', 15);
 
         return StockMovementResource::collection($query->paginate($perPage));
+    }
+
+    public function filters()
+    {
+        $warehouseIds = StockMovement::distinct()->pluck('warehouse_id');
+        $productIds = StockMovement::distinct()->pluck('product_id');
+        $docTypes = StockMovement::distinct()->pluck('doc_type');
+
+        $warehouses = Warehouse::whereIn('id', $warehouseIds)->get(['id', 'name']);
+        $products = Product::whereIn('id', $productIds)->get(['id', 'name']);
+
+        $docTypeLabels = [
+            'App\\Models\\Order' => 'Заказ',
+            'App\\Models\\Supply' => 'Поставка',
+            'App\\Models\\Transfer' => 'Перемещение',
+        ];
+
+        $docTypes = $docTypes->map(fn ($type) => [
+            'value' => $type,
+            'label' => $docTypeLabels[$type] ?? $type,
+        ])->values();
+
+        return response()->json([
+            'warehouses' => $warehouses,
+            'products' => $products,
+            'doc_types' => $docTypes,
+        ]);
     }
 }

@@ -10,8 +10,31 @@ use Illuminate\Support\Facades\DB;
 
 class OrderService
 {
-    public function create(array $data): Order
+    public function create(array $data): Order|JsonResponse
     {
+        $unavailableProducts = [];
+
+        foreach ($data['items'] as $item) {
+            $stock = Stock::where('product_id', $item['product_id'])
+                ->where('warehouse_id', $data['warehouse_id'])
+                ->first();
+
+            if (!$stock || $stock->stock < $item['count']) {
+                $unavailableProducts[] = [
+                    'product_id' => $item['product_id'],
+                    'required' => $item['count'],
+                    'available' => $stock ? $stock->stock : 0,
+                ];
+            }
+        }
+
+        if (!empty($unavailableProducts)) {
+            return response()->json([
+                'message' => 'Some products are not available in sufficient quantity.',
+                'unavailable_products' => $unavailableProducts,
+            ], 422);
+        }
+
         return DB::transaction(function () use ($data) {
             $order = Order::create([
                 'customer_id' => $data['customer_id'],
@@ -24,6 +47,15 @@ class OrderService
                 $order->items()->create([
                     'product_id' => $item['product_id'],
                     'count' => $item['count'],
+                ]);
+
+                StockMovement::create([
+                    'product_id' => $item['product_id'],
+                    'warehouse_id' => $data['warehouse_id'],
+                    'doc_type' => Order::class,
+                    'doc_id' => $order->id,
+                    'quantity' => -$item['count'],
+                    'created_at' => now(),
                 ]);
             }
 
@@ -43,7 +75,7 @@ class OrderService
                     StockMovement::create([
                         'product_id' => $oldItem->product_id,
                         'warehouse_id' => $order->warehouse_id,
-                        'doc_type' => 'Order',
+                        'doc_type' => Order::class,
                         'doc_id' => $order->id,
                         'quantity' => $oldItem->count,
                         'created_at' => now(),
@@ -61,7 +93,7 @@ class OrderService
                     StockMovement::create([
                         'product_id' => $item['product_id'],
                         'warehouse_id' => $order->warehouse_id,
-                        'doc_type' => 'Order',
+                        'doc_type' => Order::class,
                         'doc_id' => $order->id,
                         'quantity' => -$item['count'],
                         'created_at' => now(),
@@ -90,7 +122,7 @@ class OrderService
                 StockMovement::create([
                     'product_id' => $item->product_id,
                     'warehouse_id' => $order->warehouse_id,
-                    'doc_type' => 'Order',
+                    'doc_type' => Order::class,
                     'doc_id' => $order->id,
                     'quantity' => -$item->count,
                     'created_at' => now(),

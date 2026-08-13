@@ -45,6 +45,11 @@ class OrderController extends Controller
         return OrderResource::collection($query->paginate($perPage));
     }
 
+    public function show(Order $order)
+    {
+        return new OrderResource($order->load(['customer', 'warehouse', 'items.product']));
+    }
+
     public function store(StoreOrderRequest $request)
     {
         $order = $this->orderService->create($request->validated());

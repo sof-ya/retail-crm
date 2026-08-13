@@ -39,7 +39,7 @@ class SupplyService
                 StockMovement::create([
                     'product_id' => $item['product_id'],
                     'warehouse_id' => $data['warehouse_id'],
-                    'doc_type' => 'Supply',
+                    'doc_type' => Supply::class,
                     'doc_id' => $supply->id,
                     'quantity' => $item['count'],
                     'created_at' => now(),

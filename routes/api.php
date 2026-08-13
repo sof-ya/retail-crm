@@ -10,12 +10,14 @@ use App\Http\Controllers\Api\WarehouseController;
 use Illuminate\Support\Facades\Route;
 
 Route::apiResource('warehouses', WarehouseController::class)->only(['index']);
+Route::get('warehouses/{warehouse}/products', [WarehouseController::class, 'products']);
 Route::apiResource('products', ProductController::class)->only(['index']);
 Route::apiResource('customers', CustomerController::class)->only(['index', 'store', 'update']);
-Route::apiResource('orders', OrderController::class)->only(['index', 'store', 'update']);
+Route::apiResource('orders', OrderController::class)->only(['index', 'show', 'store', 'update']);
 Route::patch('orders/{order}/complete', [OrderController::class, 'complete']);
 Route::patch('orders/{order}/cancel', [OrderController::class, 'cancel']);
 Route::patch('orders/{order}/resume', [OrderController::class, 'resume']);
 Route::apiResource('supplies', SupplyController::class)->only(['index', 'store']);
 Route::apiResource('transfers', TransferController::class)->only(['index', 'store']);
 Route::apiResource('stock-movements', StockMovementController::class)->only(['index']);
+Route::get('stock-movements/filters', [StockMovementController::class, 'filters']);
