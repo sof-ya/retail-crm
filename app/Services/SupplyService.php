@@ -9,6 +9,12 @@ use Illuminate\Support\Facades\DB;
 
 class SupplyService
 {
+    /**
+     * Создать поставку: увеличить остатки и записать движения.
+     *
+     * @param  array{warehouse_id: int, items: array<int, array{product_id: int, count: int}>}  $data
+     * @return \App\Models\Supply
+     */
     public function create(array $data): Supply
     {
         return DB::transaction(function () use ($data) {
@@ -26,6 +32,7 @@ class SupplyService
                 $stock = Stock::where('product_id', $item['product_id'])
                     ->where('warehouse_id', $data['warehouse_id']);
 
+                // если товар уже есть на складе, то обновить его остатки. иначе, создать запись об остатках
                 if ($stock->exists()) {
                     $stock->increment('stock', $item['count']);
                 } else {

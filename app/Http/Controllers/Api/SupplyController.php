@@ -16,6 +16,12 @@ class SupplyController extends Controller
         private SupplyService $supplyService,
     ) {}
 
+    /**
+     * Список поставок с фильтрацией по складу и дате.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection<\App\Http\Resources\SupplyResource>
+     */
     #[OA\Get(
         path: '/supplies',
         summary: 'Список поставок',
@@ -63,6 +69,14 @@ class SupplyController extends Controller
         return SupplyResource::collection($query->paginate($perPage));
     }
 
+    /**
+     * Создать поставку на склад.
+     *
+     * Увеличивает остатки товаров и записывает движения остатков.
+     *
+     * @param  \App\Http\Requests\StoreSupplyRequest  $request
+     * @return \App\Http\Resources\SupplyResource
+     */
     #[OA\Post(
         path: '/supplies',
         summary: 'Создать поставку',

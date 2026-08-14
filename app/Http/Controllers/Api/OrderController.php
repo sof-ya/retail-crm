@@ -17,6 +17,12 @@ class OrderController extends Controller
         private OrderService $orderService,
     ) {}
 
+    /**
+     * Список заказов с фильтрацией по статусу, клиенту, складу и дате создания.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection<\App\Http\Resources\OrderResource>
+     */
     #[OA\Get(
         path: '/orders',
         summary: 'Список заказов',
@@ -74,6 +80,12 @@ class OrderController extends Controller
         return OrderResource::collection($query->paginate($perPage));
     }
 
+    /**
+     * Детали заказа с позициями, клиентом и складом.
+     *
+     * @param  \App\Models\Order  $order
+     * @return \App\Http\Resources\OrderResource
+     */
     #[OA\Get(
         path: '/orders/{id}',
         summary: 'Детали заказа',
@@ -101,6 +113,14 @@ class OrderController extends Controller
         return new OrderResource($order->load(['customer', 'warehouse', 'items.product']));
     }
 
+    /**
+     * Создать заказ со списком позиций.
+     *
+     * Проверяет наличие товара на складе. При недостатке возвращает 422 с unavailable_products.
+     *
+     * @param  \App\Http\Requests\StoreOrderRequest  $request
+     * @return \App\Http\Resources\OrderResource
+     */
     #[OA\Post(
         path: '/orders',
         summary: 'Создать заказ',
@@ -131,6 +151,15 @@ class OrderController extends Controller
         return new OrderResource($order->load(['customer', 'warehouse', 'items.product']));
     }
 
+    /**
+     * Обновить заказ (только со статусом active).
+     *
+     * При обновлении позиций — пересчитывает движения остатков.
+     *
+     * @param  \App\Http\Requests\UpdateOrderRequest  $request
+     * @param  \App\Models\Order  $order
+     * @return \App\Http\Resources\OrderResource
+     */
     #[OA\Put(
         path: '/orders/{id}',
         summary: 'Обновить заказ',
@@ -165,6 +194,14 @@ class OrderController extends Controller
         return new OrderResource($order->load(['customer', 'warehouse', 'items.product']));
     }
 
+    /**
+     * Завершить заказ (перевод в статус completed).
+     *
+     * Списание остатков и запись движений выполняются при завершении.
+     *
+     * @param  \App\Models\Order  $order
+     * @return \App\Http\Resources\OrderResource|\Illuminate\Http\JsonResponse
+     */
     #[OA\Patch(
         path: '/orders/{id}/complete',
         summary: 'Завершить заказ',
@@ -202,6 +239,12 @@ class OrderController extends Controller
         return $result;
     }
 
+    /**
+     * Отменить заказ (перевод в статус canceled).
+     *
+     * @param  \App\Models\Order  $order
+     * @return \App\Http\Resources\OrderResource|\Illuminate\Http\JsonResponse
+     */
     #[OA\Patch(
         path: '/orders/{id}/cancel',
         summary: 'Отменить заказ',
@@ -239,6 +282,14 @@ class OrderController extends Controller
         return $result;
     }
 
+    /**
+     * Возобновить отменённый заказ (перевод в статус active).
+     *
+     * Проверяет наличие товара на складе перед возобновлением.
+     *
+     * @param  \App\Models\Order  $order
+     * @return \App\Http\Resources\OrderResource|\Illuminate\Http\JsonResponse
+     */
     #[OA\Patch(
         path: '/orders/{id}/resume',
         summary: 'Возобновить заказ',

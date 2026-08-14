@@ -10,10 +10,19 @@ use Illuminate\Support\Facades\DB;
 
 class OrderService
 {
+    /**
+     * Создать заказ со списком позиций.
+     *
+     * Проверяет наличие товара на складе. При недостатке возвращает 422.
+     *
+     * @param  array{customer_id: int, warehouse_id: int, items: array<int, array{product_id: int, count: int}>}  $data
+     * @return \App\Models\Order|\Illuminate\Http\JsonResponse
+     */
     public function create(array $data): Order|JsonResponse
     {
         $unavailableProducts = [];
 
+        // проверка остатков товаров и формирование массива с товарами, которых не хватает
         foreach ($data['items'] as $item) {
             $stock = Stock::where('product_id', $item['product_id'])
                 ->where('warehouse_id', $data['warehouse_id'])
@@ -28,6 +37,7 @@ class OrderService
             }
         }
 
+        // если какого-то товара недостаточно, вернуть ошибку и список товаров, которых нет в наличии
         if (!empty($unavailableProducts)) {
             return response()->json([
                 'message' => 'Some products are not available in sufficient quantity.',
@@ -49,6 +59,7 @@ class OrderService
                     'count' => $item['count'],
                 ]);
 
+                // запись движения товара при создании заказа
                 StockMovement::create([
                     'product_id' => $item['product_id'],
                     'warehouse_id' => $data['warehouse_id'],
@@ -63,6 +74,13 @@ class OrderService
         });
     }
 
+    /**
+     * Обновить заказ и пересчитать движения остатков при изменении позиций.
+     *
+     * @param  \App\Models\Order  $order
+     * @param  array{customer_id?: int, warehouse_id?: int, items?: array<int, array{product_id: int, count: int}>}  $data
+     * @return \App\Models\Order
+     */
     public function update(Order $order, array $data): Order
     {
         return DB::transaction(function () use ($order, $data) {
@@ -71,6 +89,7 @@ class OrderService
             if (isset($data['items'])) {
                 $oldItems = $order->items()->get();
 
+                // запись движения товаров при обновлении заказа (старые товары возвращаются на склад)
                 foreach ($oldItems as $oldItem) {
                     StockMovement::create([
                         'product_id' => $oldItem->product_id,
@@ -82,6 +101,8 @@ class OrderService
                     ]);
                 }
 
+
+                // удаление старых товаров и создание новых + запись о движении
                 $order->items()->delete();
 
                 foreach ($data['items'] as $item) {
@@ -105,6 +126,12 @@ class OrderService
         });
     }
 
+    /**
+     * Завершить заказ: списать остатки, записать движения, установить completed_at.
+     *
+     * @param  \App\Models\Order  $order
+     * @return \App\Models\Order|\Illuminate\Http\JsonResponse
+     */
     public function complete(Order $order): Order|JsonResponse
     {
         if ($order->status !== 'active') {
@@ -114,6 +141,7 @@ class OrderService
         return DB::transaction(function () use ($order) {
             $order->load('items');
 
+            // при завершении заказа, остатки списываются и добавляется запись о движении
             foreach ($order->items as $item) {
                 Stock::where('product_id', $item->product_id)
                     ->where('warehouse_id', $order->warehouse_id)
@@ -138,6 +166,12 @@ class OrderService
         });
     }
 
+    /**
+     * Отменить заказ (перевод в статус canceled).
+     *
+     * @param  \App\Models\Order  $order
+     * @return \App\Models\Order|\Illuminate\Http\JsonResponse
+     */
     public function cancel(Order $order): Order|JsonResponse
     {
         if ($order->status !== 'active') {
@@ -149,6 +183,12 @@ class OrderService
         return $order;
     }
 
+    /**
+     * Возобновить отменённый заказ: проверить наличие и перевести в active.
+     *
+     * @param  \App\Models\Order  $order
+     * @return \App\Models\Order|\Illuminate\Http\JsonResponse
+     */
     public function resume(Order $order): Order|JsonResponse
     {
         if ($order->status !== 'canceled') {
@@ -159,6 +199,7 @@ class OrderService
 
         $unavailableProducts = [];
 
+        // проверка количества товаров: если товаров недостаточно, возвращается ошибка
         foreach ($order->items as $item) {
             $stock = Stock::where('product_id', $item->product_id)
                 ->where('warehouse_id', $order->warehouse_id)

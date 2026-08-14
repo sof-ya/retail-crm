@@ -10,6 +10,12 @@ use OpenApi\Attributes as OA;
 
 class ProductController extends Controller
 {
+    /**
+     * Список товаров с остатками по складам.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection<\App\Http\Resources\ProductResource>
+     */
     #[OA\Get(
         path: '/products',
         summary: 'Список товаров',

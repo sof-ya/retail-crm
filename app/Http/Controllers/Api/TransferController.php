@@ -16,6 +16,12 @@ class TransferController extends Controller
         private TransferService $transferService,
     ) {}
 
+    /**
+     * Список перемещений с фильтрацией по складам-отправителю/получателю и дате.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection<\App\Http\Resources\TransferResource>
+     */
     #[OA\Get(
         path: '/transfers',
         summary: 'Список перемещений',
@@ -47,6 +53,7 @@ class TransferController extends Controller
     {
         $query = Transfer::with(['fromWarehouse', 'toWarehouse', 'items.product']);
 
+        // если переданы параметры фильтров, то фильтруем по ним запрос 
         if ($request->filled('from_warehouse_id')) {
             $query->where('from_warehouse_id', $request->from_warehouse_id);
         }
@@ -68,6 +75,14 @@ class TransferController extends Controller
         return TransferResource::collection($query->paginate($perPage));
     }
 
+    /**
+     * Создать перемещение товаров между складами.
+     *
+     * Проверяет наличие на складе-отправителе. Создаёт два движения остатков (списание и приход).
+     *
+     * @param  \App\Http\Requests\StoreTransferRequest  $request
+     * @return \App\Http\Resources\TransferResource|\Illuminate\Http\JsonResponse
+     */
     #[OA\Post(
         path: '/transfers',
         summary: 'Создать перемещение',
@@ -95,6 +110,7 @@ class TransferController extends Controller
     {
         $result = $this->transferService->create($request->validated());
 
+        // возвращается либо объект перемещения, либо ошибка
         if ($result instanceof Transfer) {
             return new TransferResource($result->load(['fromWarehouse', 'toWarehouse', 'items.product']));
         }

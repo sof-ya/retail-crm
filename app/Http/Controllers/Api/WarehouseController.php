@@ -11,6 +11,11 @@ use OpenApi\Attributes as OA;
 
 class WarehouseController extends Controller
 {
+    /**
+     * Список всех складов.
+     *
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection<\App\Http\Resources\WarehouseResource>
+     */
     #[OA\Get(
         path: '/warehouses',
         summary: 'Список складов',
@@ -38,6 +43,12 @@ class WarehouseController extends Controller
         return WarehouseResource::collection(Warehouse::all());
     }
 
+    /**
+     * Товары с положительным остатком на указанном складе.
+     *
+     * @param  \App\Models\Warehouse  $warehouse
+     * @return \Illuminate\Http\JsonResponse
+     */
     #[OA\Get(
         path: '/warehouses/{id}/products',
         summary: 'Товары на складе',

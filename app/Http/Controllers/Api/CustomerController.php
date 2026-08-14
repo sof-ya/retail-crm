@@ -12,6 +12,12 @@ use OpenApi\Attributes as OA;
 
 class CustomerController extends Controller
 {
+    /**
+     * Список клиентов с фильтрацией по имени, телефону, email.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \App\Http\Resources\CustomerResource
+     */
     #[OA\Get(
         path: '/customers',
         summary: 'Список клиентов',
@@ -63,6 +69,12 @@ class CustomerController extends Controller
         return CustomerResource::collection($query->get());
     }
 
+    /**
+     * Создать нового клиента.
+     *
+     * @param  \App\Http\Requests\StoreCustomerRequest  $request
+     * @return \App\Http\Resources\CustomerResource
+     */
     #[OA\Post(
         path: '/customers',
         summary: 'Создать клиента',
@@ -95,6 +107,13 @@ class CustomerController extends Controller
         return new CustomerResource($customer);
     }
 
+    /**
+     * Обновить данные клиента.
+     *
+     * @param  \App\Http\Requests\UpdateCustomerRequest  $request
+     * @param  \App\Models\Customer  $customer
+     * @return \App\Http\Resources\CustomerResource
+     */
     #[OA\Put(
         path: '/customers/{id}',
         summary: 'Обновить клиента',

@@ -12,6 +12,12 @@ use OpenApi\Attributes as OA;
 
 class StockMovementController extends Controller
 {
+    /**
+     * История движений остатков с фильтрацией по складу, товару, типу документа и дате.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection<\App\Http\Resources\StockMovementResource>
+     */
     #[OA\Get(
         path: '/stock-movements',
         summary: 'Движения остатков',
@@ -69,6 +75,13 @@ class StockMovementController extends Controller
         return StockMovementResource::collection($query->paginate($perPage));
     }
 
+    /**
+     * Варианты значений для фильтров на фронтенде.
+     *
+     * Возвращает списки складов, товаров и типов документов, по которым есть движения.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
     #[OA\Get(
         path: '/stock-movements/filters',
         summary: 'Варианты фильтров',

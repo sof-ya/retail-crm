@@ -10,10 +10,17 @@ use Illuminate\Support\Facades\DB;
 
 class TransferService
 {
+    /**
+     * Создать перемещение: списать с отправителя, приход на получателя, записать движения.
+     *
+     * @param  array{from_warehouse_id: int, to_warehouse_id: int, items: array<int, array{product_id: int, count: int}>}  $data
+     * @return \App\Models\Transfer|\Illuminate\Http\JsonResponse
+     */
     public function create(array $data): Transfer|JsonResponse
     {
         $unavailableProducts = [];
 
+        // проверка количества товаров на складе отгрузки: если товара недостаточно, возвращается ошибка
         foreach ($data['items'] as $item) {
             $stock = Stock::where('product_id', $item['product_id'])
                 ->where('warehouse_id', $data['from_warehouse_id'])
@@ -42,6 +49,7 @@ class TransferService
                 'created_at' => now(),
             ]);
 
+            // каждый товар из склада отгрузки записываем в перемещение 
             foreach ($data['items'] as $item) {
                 $transfer->items()->create([
                     'product_id' => $item['product_id'],
@@ -55,6 +63,7 @@ class TransferService
                 $targetStock = Stock::where('product_id', $item['product_id'])
                     ->where('warehouse_id', $data['to_warehouse_id']);
 
+                // если на принимающем складе есть остатки товара, то увеличить количество. иначе, создать новую запись остатков 
                 if ($targetStock->exists()) {
                     $targetStock->increment('stock', $item['count']);
                 } else {
@@ -65,6 +74,7 @@ class TransferService
                     ]);
                 }
 
+                // создаётся две записи о движении товаров: о списании на складе отгрузки и о пополнении на складе приемки 
                 StockMovement::create([
                     'product_id' => $item['product_id'],
                     'warehouse_id' => $data['from_warehouse_id'],
