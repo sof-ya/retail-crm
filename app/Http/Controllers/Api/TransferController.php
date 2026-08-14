@@ -8,6 +8,7 @@ use App\Http\Resources\TransferResource;
 use App\Models\Transfer;
 use App\Services\TransferService;
 use Illuminate\Http\Request;
+use OpenApi\Attributes as OA;
 
 class TransferController extends Controller
 {
@@ -15,6 +16,33 @@ class TransferController extends Controller
         private TransferService $transferService,
     ) {}
 
+    #[OA\Get(
+        path: '/transfers',
+        summary: 'Список перемещений',
+        description: 'Возвращает перемещения с пагинацией и фильтрацией по складам-отправителю/получателю и дате.',
+        tags: ['Transfers'],
+        parameters: [
+            new OA\Parameter(name: 'from_warehouse_id', in: 'query', description: 'Фильтр по складу-отправителю', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'to_warehouse_id', in: 'query', description: 'Фильтр по складу-получателю', schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'created_from', in: 'query', description: 'Дата от (Y-m-d)', schema: new OA\Schema(type: 'string', format: 'date')),
+            new OA\Parameter(name: 'created_to', in: 'query', description: 'Дата до (Y-m-d)', schema: new OA\Schema(type: 'string', format: 'date')),
+            new OA\Parameter(name: 'per_page', in: 'query', description: 'Кол-во на странице (по умолчанию 15)', schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Пагинированный список перемещений',
+                content: new OA\JsonContent(
+                    type: 'object',
+                    properties: [
+                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/Transfer')),
+                        new OA\Property(property: 'links', type: 'object'),
+                        new OA\Property(property: 'meta', type: 'object'),
+                    ]
+                )
+            ),
+        ]
+    )]
     public function index(Request $request)
     {
         $query = Transfer::with(['fromWarehouse', 'toWarehouse', 'items.product']);
@@ -40,6 +68,29 @@ class TransferController extends Controller
         return TransferResource::collection($query->paginate($perPage));
     }
 
+    #[OA\Post(
+        path: '/transfers',
+        summary: 'Создать перемещение',
+        description: 'Перемещает товары между складами. Проверяет наличие на складе-отправителе. Создаёт два движения остатков (списание и приход).',
+        tags: ['Transfers'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(ref: '#/components/schemas/StoreTransferRequest')
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Перемещение создано',
+                content: new OA\JsonContent(
+                    type: 'object',
+                    properties: [
+                        new OA\Property(property: 'data', ref: '#/components/schemas/Transfer'),
+                    ]
+                )
+            ),
+            new OA\Response(response: 422, description: 'Ошибка валидации / недостаточно товара на складе-отправителе', content: new OA\JsonContent(ref: '#/components/schemas/UnavailableProducts')),
+        ]
+    )]
     public function store(StoreTransferRequest $request)
     {
         $result = $this->transferService->create($request->validated());
